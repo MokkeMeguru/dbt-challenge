@@ -22,63 +22,76 @@
 
 の２種類のテーブルにデータを正規化、これら組み合わせることでデータ分析を行う手法です
 
-例えば、ゲームの分析をするとして
+例えば、ソーシャルゲームの分析をするとして
 
-「ガチャについて、課金層で絞り込んで特定イベントのガチャのプレイ回数を調べたい」
+>「ガチャについて、特定のガチャイベントのユーザごとのガチャのプレイ回数を調べたい」
 
 みたいな要件をディメンショナルモデリングで考えると以下のようなディメンションとファクトを考えることができます。
 
 - ファクト: ガチャ
-- ディメンション: ユーザ (with 月間課金量)
 - ディメンション: ガチャイベント
+- ディメンション: ユーザ
 
 SQLに慣れた形にとっては以下のように考えるとわかりやすいかもしれません。
 
 ```sql
+-- fc_gacha はガチャ結果のファクトテーブル
+-- dm_gacha_event はガチャイベントのテーブル
+-- dm_user はユーザのテーブル
+
 SELECT 
-  fc_gacha.user_id, count(*) as gacha_play_count
+  dm_user.id, count(distinct fc_gacha.id) as gacha_play_count
+FROM 
+  fc_gacha
 JOIN
-  dm_user_monthly_charge ON fc_gacha.user_id = dm_user_monthly_charge.user_id
-JOIN
-  dm_gacha_event ON fc_gacha.dm_gacha_event.gacha_event_id = dm_gacha_event.gacha_event_id
+  dm_gacha_event ON fc_gacha.dm_gacha_event.gacha_event_id = dm_gacha_event.id
+JOIN 
+  dm_user ON fc_gacha.user_id = dm_user.id
 WHERE
-  dm_user_monthly_charge.charge_amount > 0 AND
-  dm_user_monthly_charge.charge_amount < 10000 AND
-  dm_gacha_event.gacha_event_id = "2023_roki_birthday_gacha"
+  dm_gacha_event.id = "2023_04_roki_birthday_gacha"
 GROUP BY
-  dm_gacha_user_id
+  dm_user.id
 ```
 
-またディメンション同士の結合を用いて相関分析なども行うことができ、例えば
+またファクト同士の結合を用いて分析を行うこともでき、例えば
 
-「ガチャについて、イベント消化率とユーザのキャラ保持数で絞り込んでガチャ回数を調べたい」
+>「ガチャについて、課金層を絞って特定のガチャイベントのガチャのプレイ回数を調べたい」
 
 みたいな要件であれば以下のように考えることができます
 
+- ファクト: ガチャ
+- ファクト: ユーザの月間課金量
+- ディメンション: ガチャイベント
+- ディメンション: ユーザ
+
 ```sql
+-- fc_gacha はガチャ結果のファクトテーブル
+-- fc_user_monthly_charge はユーザ課金額のファクトテーブル
+-- dm_gacha_event はガチャイベントのテーブル
+-- dm_user はユーザのテーブル
+
 SELECT
-  fc_gacha.user_id, fc_user_play_event.event_id, count(*) as gacha_play_count
+  dm_user.id, count(distinct fc_gacha.id) as gacha_play_count
 FROM
   fc_gacha
 JOIN 
-  fc_user_play_event ON fc_gacha.gacha_event_id = fc_user_play_event.gacha_event_id
-JOIN 
-  fc_user_char_summary ON fc_gacha.user_id = fc_user_char_summary.user_id
+  fc_user_monthly_charge ON fc_user_monthly_charge.user_id = fc_gacha.user_id
 JOIN
-  dm_event ON fc_user_play_event.event_id = dm_event.event_id
+  dm_gacha_event ON fc_gacha.dm_gacha_event.gacha_event_id = dm_gacha_event.id
+JOIN 
+  dm_user ON fc_gacha.user_id = dm_user.id
 WHERE
-  dm_event.event_id = "2023_GW_event"
+  dm_gacha_event.id = "2023_04_roki_birthday_gacha" AND
+  fc_user_monthly_charge.year_month = "202304" AND 
+  fc_user_monthly_charge.charge_amount > 0 AND 
+  fc_user_monthly_charge.charge_amount < 10000
 GROUP BY
-  dm_user_event.user_id,
-  dm_user_event.event_id
-HAVING
-  (fc_user_play_event.user_achieve_stage_num / dm_event.stage_num) >= 0.8 AND
-  fc_user_char_summary.char_count >= 800
+  dm_user.id
 ```
 
-ディメンショナルモデリングのメリットとしては、データ絞り込みなどが見やすくなり、またファクトテーブルが画一化されることでファクトテーブル相当のクエリが実装者ごとにぶれてしまう問題を軽減できるのが挙げられます。
+ディメンショナルモデリングのメリットとしては、データ絞り込みなどが見やすくなり、また正規化された中間テーブルをベースに分析を進めることで実装者ごとの分析結果のぶれを軽減できることが挙げられます
 
-一方でディメンショナルモデリングのしんどい（と言うか分析全般で苦しい）ところとしては、ありとあらゆるデータを繋ぎこんで、全ての因果を解き明かしたい (**ほとんどは相関にすぎません**) 場合などに、テーブルの結合数が素晴らしいことになったり、適切なクエリ設計ができずに激重 Tableau / Looker が爆誕して非難轟轟になったり、というものが挙げられます。
+一方でディメンショナルモデリングのしんどいところとしては、ありとあらゆるデータを繋ぎこんで、全ての因果を解き明かしたい (**ほとんどは相関にすぎません**) 場合などに、テーブルの結合数が素晴らしいことになったり、適切なクエリ設計ができずに激重 Tableau / Looker が爆誕して非難轟轟になったり、というものが挙げられます。
 
 また別のしんどいところとしては、ディメンショナルモデリングではファクトに対してディメンションが原則として one to one / many to one の関係であることが求められる、というものが挙げられます。例えば、EC サイトの商品をファクトとした `fc_shop_item` を考えます。この時商品に複数タグがつけられるとしてそれを `dm_shop_item_tag` とすると、 `fc_shop_item` と `dm_shop_item_tag` は原則として結びつけるのが困難です。解決方法の例としては以下のような方針が考えられます。
 
@@ -88,7 +101,7 @@ HAVING
 
 参考
 
-- ブリッジテーブル : https://bigbear.ai/blog/bridge-tables-deep-dive/
+- ブリッジテーブルについて : https://bigbear.ai/blog/bridge-tables-deep-dive/
 
 ## BigQuery のサンプルデータセットを使ってディメンショナルモデリングを設計してみる
 
@@ -240,17 +253,17 @@ test:
 ```
 
 参考:
-- https://docs.getdbt.com/reference/warehouse-setups/bigquery-setup
-- https://hub.getdbt.com/dbt-labs/dbt_utils/latest/
-- https://github.com/Data-Engineer-Camp/dbt-dimensional-modelling
+- dbt x BigQuery の環境構築について: https://docs.getdbt.com/reference/warehouse-setups/bigquery-setup
+- dbt-utils について: https://hub.getdbt.com/dbt-labs/dbt_utils/latest/
+- dbt を用いてディメンショナルモデリングするサンプル: https://github.com/Data-Engineer-Camp/dbt-dimensional-modelling
 
 ### モデルの定義
 
 環境構築が一通り完了したので、いよいよファクトテーブルやディメンショナルテーブルをそれぞれ書いていきます。
 
 参考:
-- https://github.com/Data-Engineer-Camp/dbt-dimensional-modelling
-- https://docs.getdbt.com/guides/best-practices/how-we-structure/1-guide-overview
+- dbt を用いてディメンショナルモデリングするサンプル: https://github.com/Data-Engineer-Camp/dbt-dimensional-modelling
+- dbt を用いてデータモデリングするガイド: https://docs.getdbt.com/guides/best-practices/how-we-structure/1-guide-overview
 
 #### `staging`
 
@@ -327,8 +340,8 @@ models:
 同様の対応を `product`, `order_items` についても行なっていきます
 
 参考: 
-- https://docs.getdbt.com/guides/best-practices/how-we-structure/1-guide-overview
-- https://github.com/Data-Engineer-Camp/dbt-dimensional-modelling/blob/main/adventureworks/models/marts/dim_address.sql
+- dbt を用いてデータモデリングするガイド: https://docs.getdbt.com/guides/best-practices/how-we-structure/1-guide-overview
+- dbt を用いてディメンショナルモデリングするサンプル: https://github.com/Data-Engineer-Camp/dbt-dimensional-modelling/blob/main/adventureworks/models/marts/dim_address.sql
 
 #### `marts`
 
@@ -497,7 +510,7 @@ $ poetry run dbt docs serve # localhost:8080 でブラウザ経由の GUI から
 (~~集約したはいいものの XXX でフィルタリングしなきゃやだ！とかなったときにどうするんだろう~~)
 
 参考:
-- https://docs.getdbt.com/guides/best-practices/how-we-structure/3-intermediate
+- dbt における `intermediate` についての説明: https://docs.getdbt.com/guides/best-practices/how-we-structure/3-intermediate
 
 ### ドキュメントの書きどころ
 
@@ -511,4 +524,4 @@ dbt にはいくつもの中間レイヤーを用意でき、またそれぞれ�
 プロダクトの規模や分析したい複雑性さに応じて使い分けるのが良いのかもしれません
 
 参考:
-- https://github.com/Data-Engineer-Camp/dbt-dimensional-modelling
+- dbt で `staging` を `marts` 内部で定義する例: https://github.com/Data-Engineer-Camp/dbt-dimensional-modelling
