@@ -1,4 +1,4 @@
-## 動機
+# 動機
 
 > おーい磯野ー！データ分析しようぜ！
 
@@ -6,14 +6,9 @@
 
 データ分析とはサービスなどに蓄積されたDBやログなどのデータを解析することである、サービス品質の向上や新しいビジネスモデルの立案を行うための手段の一つです
 
-データ分析においては、様々な形に蓄積されたデータを分析したい形に加工するプロセスがその比重を大きく占めており
+データ分析においては、様々な形に蓄積されたデータを分析したい形に加工するプロセスがその比重を大きく占めており様々な方針が提案されていますが、今回はディメンショナルモデリングという手法を考えます。
 
-1. Event Sourcing よろしく全てのログデータを SSOT としてそのまま分析にかける方法
-2. DWH (data ware house) へ一旦全てのデータを正規化しつつ保存し、正規化されたモデルを組み合わせることで効率的にクエリを作る方法
-
-などいろいろな方針がありますが、今回は 2. の方針をとりつつ、ディメンショナルモデリングという手法を考えます。
-
-## ディメンショナルモデリングについて
+# ディメンショナルモデリングについて
 
 ディメンショナルモデリングとは、
 
@@ -32,7 +27,7 @@
 - ディメンション: ガチャイベント
 - ディメンション: ユーザ
 
-SQLに慣れた形にとっては以下のように考えるとわかりやすいかもしれません。
+SQL に慣れた方は以下のように考えるとわかりやすいかもしれません。
 
 ```sql
 -- fc_gacha はガチャ結果のファクトテーブル
@@ -94,13 +89,16 @@ GROUP BY
 ![gacha02](dbt-gacha02.drawio.png)
 
 
+## ディメンショナルモデリングのメリットとデメリット
 ディメンショナルモデリングのメリットとしては、データ絞り込みなどが見やすくなり、また正規化された中間テーブルをベースに分析を進めることで実装者ごとの分析結果のぶれを軽減できることが挙げられます
 
 一方でディメンショナルモデリングのしんどいところとしては、ありとあらゆるデータを繋ぎこんで、全ての因果を解き明かしたい (**ほとんどは相関にすぎません**) 場合などに、テーブルの結合数が素晴らしいことになったり、適切なクエリ設計ができずに激重 Tableau / Looker が爆誕して非難轟轟になったり、というものが挙げられます。
 
-また別のしんどいところとしては、ディメンショナルモデリングではファクトに対してディメンションが原則として one to one / many to one の関係であることが求められる、というものが挙げられます。例えば、EC サイトの商品をファクトとした `fc_shop_item` を考えます。この時商品に複数タグがつけられるとしてそれを `dm_shop_item_tag` とすると、 `fc_shop_item` と `dm_shop_item_tag` は原則として結びつけるのが困難です。解決方法の例としては以下のような方針が考えられます。
+また別のしんどいところとしては、ディメンショナルモデリングではファクトに対してディメンションが原則として one to one / many to one の関係であることが求められる、というものが挙げられます。
 
-1. `fc_shop_item_with_tag` を作って `dm_shop_item_tag` を one to one で結びつける (代わりに `fc_shop_item_with_tag` は商品IDに対して複数レコードを持つ)
+例えば、EC サイトの商品をファクトとした `fc_shop_item` を考えます。この時商品に複数タグがつけられるとしてそれを `dm_shop_item_tag` とすると、 `fc_shop_item` と `dm_shop_item_tag` は原則として結びつけるのが困難です。解決方法の例としては以下のような方針が考えられます。
+
+1. 商品IDとタグで一意となるようなファクトテーブル `fc_shop_item_with_tag` を作って `dm_shop_item_tag` を one to one で結びつける
 2. `fc_shop_item` に対してブリッジテーブル `bg_shop_item_tag_group` を作り `fc_shop_item` と `bg_shop_item_tag_group` を many to one に結んで `bg_shop_item_tag_group` と `dm_shop_item_tag` を one to many で結びつける
 3. (タグの中身ではなくタグ数だけを考えたいのであれば) `dm_shop_item_tag_summary` のような商品IDに対して one to one になるようなディメンションを作り、 one to one で結びつける
 
@@ -108,18 +106,17 @@ GROUP BY
 
 - ブリッジテーブルについて : https://bigbear.ai/blog/bridge-tables-deep-dive/
 
-## BigQuery のサンプルデータセットを使ってディメンショナルモデリングを設計してみる
+# BigQuery のサンプルデータセットを使ってディメンショナルモデリングを設計してみる
 
-物は試しということで [BigQuery](https://cloud.google.com/bigquery?hl=ja) のサンプルデータセットを用いてデータモデリングの真似事をしてみます。
+物は試しということで [BigQuery](https://cloud.google.com/bigquery?hl=ja) にある架空のeコマース衣料品サイトのデータセット `theLook eCommerce` を用いてデータモデリングをしてみます。
 
-まずは自前で BigQuery を用意し、エクスプローラの追加リンク > `公開データセット` > `theLook eCommerce` を選択します。
+まずは自前で BigQuery を用意し、エクスプローラの `追加` > `公開データセット` > `theLook eCommerce` を選択します。
 
-`theLook eCommerce` は架空のeコマース衣料品サイトの情報が入っています。
-今回はこのデータセットを以下の要件を念頭にディメンショナルモデリングしてみます。
+今回は以下の要件を念頭にこのデータセットをディメンショナルモデリングしてみます。
 
 > 「20代のアクセサリ購入について、購入数と金額が知りたい」
 
-### よくわからないのでとりあえずえーいしてみる
+## よくわからないのでとりあえずクエリしてみる
 
 `theLook eCommerce` のことはよくわからないので、とりあえずクエリしてみてそこからデータモデリングの方針を立ててみます
 
@@ -161,7 +158,7 @@ WHERE
 --    Maternity, Clothing Sets, Pants & Capris, Socks & Hosiery, Blazers & Jackets, Jumpsuits & Rompers]
 ```
 
-```
+```sql
 -- fc_order_item
 SELECT 
   count(*)
@@ -172,15 +169,15 @@ FROM
 ```
 
 なんとなくこのくらいの規模感であればテーブルをよしなに JOIN して終わりな気もしますが、
-この例をディメンショナルモデリングで進めていこうと思います
+今回はこの例をディメンショナルモデリングで進めていこうと思います
 
-## dbt を使ってディメンショナルモデリングをやってみる
+# dbt を使ってディメンショナルモデリングをやってみる
 
-### 環境構築
+## 環境構築
 
 今回は [dbt](https://docs.getdbt.com/) を利用して BigQuery のデータをディメンショナルモデリングしてみます
 
-dbt などのパッケージは python 経由で install できるので、良い感じに poetry で管理します
+dbt は python 経由で install できるので、良い感じに [poetry](https://github.com/python-poetry/poetry) で管理します
 
 ```
 $ poetry init
@@ -188,19 +185,21 @@ $ poetry add dbt-core dbt-bigquery
 $ poetry add -D sqlfluff
 ```
 
-dbt がインストールできたら、dbt project を作成します。Google Cloud の認証などが必要になるため、適宜入力を行い、`gcloud auth login` `gcloud config set project <project-id>` などを行なって Google Cloud との疎通を行います
+dbt がインストールできたら、dbt project を作成します。
+
+まずは BigQuery を使う都合上、Google Cloud の認証を行い、その上で dbt project を作成します。
 
 ```
 $ gcloud auth application-default login \
   --scopes=https://www.googleapis.com/auth/bigquery,\
 https://www.googleapis.com/auth/drive.readonly,\
 https://www.googleapis.com/auth/iam.test
-$ poetry run dbt init dbt_github --profiles-dir .
+$ poetry run dbt init dbt_thelookec --profiles-dir .
 ```
 
 また、dbt の開発に便利なツールである [dbt-utils](https://github.com/dbt-labs/dbt-utils) も入れてしまいましょう。`dbt_github/packages.yaml` に以下を記述し `poetry run dbt deps` を実行します
 
-```
+```yaml
 packages:
   - package: dbt-labs/dbt_utils
     version: 1.1.0
@@ -262,7 +261,7 @@ test:
 - dbt-utils について: https://hub.getdbt.com/dbt-labs/dbt_utils/latest/
 - dbt を用いてディメンショナルモデリングするサンプル: https://github.com/Data-Engineer-Camp/dbt-dimensional-modelling
 
-### モデルの定義
+## モデルの定義
 
 環境構築が一通り完了したので、いよいよファクトテーブルやディメンショナルテーブルをそれぞれ書いていきます。
 
@@ -270,7 +269,7 @@ test:
 - dbt を用いてディメンショナルモデリングするサンプル: https://github.com/Data-Engineer-Camp/dbt-dimensional-modelling
 - dbt を用いてデータモデリングするガイド: https://docs.getdbt.com/guides/best-practices/how-we-structure/1-guide-overview
 
-#### `staging`
+### `staging`
 
 では早速 `dm_user` などを定義していこう、ということになるのが自然です
 
@@ -305,16 +304,13 @@ sources:
   - name: thelookec
     database: bigquery-public-data
     schema: thelook_ecommerce
-    description: >-
-      Fictitious E-Commerce Dataset
-      by look team
+    description: Fictitious E-Commerce Dataset
     tables:
       - name: users
         description: ユーザ情報
 ```
 
 作成した staging モデル `stg_thelookec__users` の定義などは `models/staging/thelookec/_thelookec__models.yml` に書きます。
-staging モデルに書き出す段階で、enum などの書き換えを行なっておくことで後のディメンションやファクトの構築が楽になるかもしれません
 
 ```yaml
 version: 2
@@ -348,9 +344,9 @@ models:
 - dbt を用いてデータモデリングするガイド: https://docs.getdbt.com/guides/best-practices/how-we-structure/1-guide-overview
 - dbt を用いてディメンショナルモデリングするサンプル: https://github.com/Data-Engineer-Camp/dbt-dimensional-modelling/blob/main/adventureworks/models/marts/dim_address.sql
 
-#### `marts`
+### `marts`
 
-`staging` で作業用のモデルが準備できたので、いよいよディメンションやファクトの定義を `models/marts` 以下で行います
+`staging` で中間モデルが準備できたので、いよいよディメンションやファクトの定義を `models/marts` 以下で行います
 
 `dm_user.sql`
 
@@ -402,7 +398,7 @@ models:
 
 同様の対応を `dm_product`, `fc_order_item` についても行なっていきます
 
-## 実際に使ってみる
+# 実際に使ってみる
 
 定義をできたところで、実際にテーブル作成 + テストまで行いましょう
 
@@ -434,11 +430,11 @@ WHERE
 
 期待通りディメンションで条件付けしてファクトから数字を求めることができました
 
-## dbt 開発を快適にする
+# dbt 開発を快適にする
 
 ここまでで、ガッと dbt で ディメンショナルモデリングをする方法を紹介してきましたが、さらに linter やドキュメントについての設定を加えるとより dbt 開発が快適になります
 
-### sqlfluff による lint 
+## sqlfluff による lint 
 
 SQL のフォーマットが人によって違うのは開発体験がよくないので、linter を導入しましょう
 
@@ -481,7 +477,7 @@ tab_space_size = 2
 *macros/
 ```
 
-### dbt docs generate によるドキュメント作成
+## dbt docs generate によるドキュメント作成
 
 ドキュメントの生成も行いましょう。dbt にはドキュメントの生成を補助する機能がついているので活用します
 
@@ -490,9 +486,9 @@ $ poetry run dbt docs generate
 $ poetry run dbt docs serve # localhost:8080 でブラウザ経由の GUI からドキュメントを確認できる
 ```
 
-## Next Step
+# Next Step
 
-### `dm_product` のカテゴリのような enum の情報をどのように持たせるか
+## `dm_product` のカテゴリのような enum の情報をどのように持たせるか
 
 今回商品ディメンションテーブル `dm_product` のカテゴリ `category` を用いた絞り込みを行いました。
 ここで気になるところとして、データ分析を行うユーザはどのようにして `category` に アクセサリ `Accessaries` があることを知ったのか、という点です
@@ -506,7 +502,7 @@ $ poetry run dbt docs serve # localhost:8080 でブラウザ経由の GUI から
 1. マスタの定義だけは、ディメンショナルモデリングではなく、別の解決方法を用いてモデリングし、分析者に別クエリを実行してもらう
 2. 十分にマスタの数が少なく変更が少ないのであれば、 enum としてドキュメント化する
 
-### `intermediate` の使い方
+## `intermediate` の使い方
 
 ピボットテーブルなどを作成する中間テーブルとして `intermediate` がありますが、今回のサンプルではピボットテーブルや集約などが不要だったので利用しませんでした
 
@@ -517,7 +513,7 @@ $ poetry run dbt docs serve # localhost:8080 でブラウザ経由の GUI から
 参考:
 - dbt における `intermediate` についての説明: https://docs.getdbt.com/guides/best-practices/how-we-structure/3-intermediate
 
-### ドキュメントの書きどころ
+## ドキュメントの書きどころ
 
 dbt にはいくつもの中間レイヤーを用意でき、またそれぞれのレイヤーのモデルに対して description を追加することができます。
 

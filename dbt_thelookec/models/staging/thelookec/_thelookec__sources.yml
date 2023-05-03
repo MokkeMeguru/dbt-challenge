@@ -4,9 +4,7 @@ sources:
   - name: thelookec
     database: bigquery-public-data
     schema: thelook_ecommerce
-    description: >-
-      Fictitious E-Commerce Dataset
-      by look team
+    description: Fictitious E-Commerce Dataset
     tables:
       - name: users
         description: ユーザ情報
