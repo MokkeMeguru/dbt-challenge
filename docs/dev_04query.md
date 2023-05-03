@@ -1,6 +1,6 @@
 # 目次
 
-- [はじめに](./dev.md)
+- [はじめに](./dev_00.md)
 - [ディメンショナルモデリングについて](./dev_01dim.md)
 - [BigQuery x ディメンショナルモデリング](./dev_02bigquery.md)
 - [BigQuery x dbt x ディメンショナルモデリング](./dev_03dbt.md)
