@@ -79,7 +79,7 @@ JOIN
   dm_user ON fc_gacha.user_id = dm_user.id
 WHERE
   dm_gacha_event.id = "2023_04_roki_birthday_gacha" AND
-  fc_user_monthly_charge.year_month = "202304" AND 
+  fc_user_monthly_charge.year_month = 202304 AND 
   fc_user_monthly_charge.charge_amount > 0 AND 
   fc_user_monthly_charge.charge_amount < 10000
 GROUP BY
@@ -97,7 +97,7 @@ GROUP BY
 
 デメリット
 
-- ありとあらゆるデータを繋ぎこんで、全ての因果を解き明かしたい (**ほとんどは相関にすぎません**) 場合などに、テーブルの結合数が素晴らしいことになる
+- ありとあらゆるデータを繋ぎこんで全ての因果を解き明かしたい (**ほとんどは相関にすぎません**) 場合などに、テーブルの結合数が素晴らしいことになる
 - 適切なクエリ設計ができずに激重 Tableau / Looker が爆誕して非難轟轟になる
 - ディメンショナルモデリングではファクトに対してディメンションが原則として one to one / many to one の関係であることが求められる
 
