@@ -10,9 +10,7 @@
 
 # BigQuery x ディメンショナルモデリング
 
-物は試しということで [BigQuery](https://cloud.google.com/bigquery?hl=ja) にある架空のeコマース衣料品サイトのデータセット `theLook eCommerce` を用いてデータモデリングをしてみます。
-
-まずは自前で BigQuery を用意し、エクスプローラの `追加` > `公開データセット` > `theLook eCommerce` を選択します。
+物は試しということで [BigQuery](https://cloud.google.com/bigquery?hl=ja) にある [架空のeコマース衣料品サイトのデータセット `theLook eCommerce`](https://console.cloud.google.com/marketplace/product/bigquery-public-data/thelook-ecommerce) を用いてデータモデリングをしてみます。
 
 今回は以下の要件を念頭にこのデータセットをディメンショナルモデリングしてみます。
 

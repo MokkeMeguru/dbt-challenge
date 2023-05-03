@@ -14,16 +14,16 @@
 
 ## sqlfluff による lint 
 
-SQL のフォーマットが人によって違うのは開発体験がよくないので、linter を導入しましょう
+SQL のフォーマットが人によって違うのは開発体験が悪いので、linter を導入しましょう
 
-dbt の有名な linter として、 [sqlfluff](https://github.com/sqlfluff/sqlfluff) があるため、こちらを活用します
+dbt に対して有名な linter の [sqlfluff](https://github.com/sqlfluff/sqlfluff) を活用します
 
 ```
 $ poetry add -D sqlfluff
 $ poetry add -D sqlfluff-templater-dbt
 ```
 
-linter の設定は `.sqlfluff`, `.sqlfluffignore` に記載します。
+linter の設定は `.sqlfluff`, `.sqlfluffignore` に書きます。
 具体的な例は以下の通り
 
 ```
