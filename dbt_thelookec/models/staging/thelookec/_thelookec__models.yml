@@ -1,0 +1,90 @@
+version: 2
+
+models:
+  - name: stg_thelookec__users
+    description: ユーザ情報
+    config:
+      materialized: view
+      sort: id
+    columns:
+      - name: id
+        description: ユーザID (Primary Key)
+        tests:
+          - unique
+          - not_null
+      - name: first_name
+        tests:
+          - not_null
+      - name: last_name
+        tests:
+          - not_null
+      - name: age
+        tests:
+          - not_null
+
+  - name: stg_thelookec__products
+    description: 商品情報
+    config:
+      materialized: view
+      sort: id
+    columns:
+      - name: id
+        description: 商品ID (Primary Key)
+        tests:
+          - unique
+          - not_null
+      - name: category
+        description: >-
+          商品カテゴリ
+          例えば、アクセサリであれば Accessaries
+        tests:
+          - not_null
+      - name: brand
+        description: >-
+          ブランド
+          null もあるので注意 (no brand)
+      - name: department
+        description: >-
+          区分 (レディース・メンズ etc.)
+        tests:
+          - not_null
+      - name: name
+        description: >-
+          商品名
+          null もあるので注意
+
+  - name: stg_thelookec__order_items
+    description: 注文商品情報
+    config:
+      materialized: view
+      sort: id
+    columns:
+      - name: id
+        description: 注文商品ID (Primay Key)
+        tests:
+          - unique
+          - not_null
+      - name: order_id
+        description: 注文ID
+        tests:
+          - not_null
+      - name: user_id
+        tests:
+          - not_null
+      - name: product_id
+        tests:
+          - not_null
+      - name: status
+        description: '{{ doc("order_item_status") }}'
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Shipped', 'Complete', 'Cancelled', 'Processing', "Returned"]
+      - name: created_at
+        description: 注文時刻
+        tests:
+          - not_null
+      - name: sale_price
+        description: 取引価格
+        tests:
+          - not_null

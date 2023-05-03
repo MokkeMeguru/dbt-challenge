@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: fc_order_item
+    description: 注文商品情報
+    config:
+      materialized: view
+      sort: id
+    columns:
+      - name: id
+        description: 注文商品ID (Primay Key)
+        tests:
+          - unique
+          - not_null
+      - name: order_id
+        description: 注文ID
+        tests:
+          - not_null
+      - name: user_id
+        tests:
+          - not_null
+      - name: product_id
+        tests:
+          - not_null
+      - name: status
+        description: '{{ doc("order_item_status") }}'
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Shipped', 'Complete', 'Cancelled', 'Processing', "Returned"]
+      - name: created_at
+        description: 注文時刻
+        tests:
+          - not_null
+      - name: sale_price
+        description: 取引価格
+        tests:
+          - not_null

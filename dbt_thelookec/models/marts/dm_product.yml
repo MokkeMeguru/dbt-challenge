@@ -1,0 +1,33 @@
+version: 2
+
+models:
+  - name: dm_product
+    description: 商品情報
+    config:
+      materialized: view
+      sort: id
+    columns:
+      - name: id
+        description: 商品ID (Primary Key)
+        tests:
+          - unique
+          - not_null
+      - name: category
+        description: >-
+          商品カテゴリ
+          例えば、アクセサリであれば Accessaries
+        tests:
+          - not_null
+      - name: brand
+        description: >-
+          ブランド
+          null もあるので注意 (no brand)
+      - name: department
+        description: >-
+          区分 (レディース・メンズ etc.)
+        tests:
+          - not_null
+      - name: name
+        description: >-
+          商品名
+          null もあるので注意

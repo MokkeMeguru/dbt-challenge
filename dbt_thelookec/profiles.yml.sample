@@ -1,0 +1,13 @@
+dbt_thelookec:
+  outputs:
+    dev:
+      dataset: dbt_thelookec
+      job_execution_timeout_seconds: 300
+      job_retries: 1
+      location: US
+      method: oauth
+      priority: interactive
+      project: <google-cloud-project-name> # please set project name
+      threads: 4
+      type: bigquery
+  target: dev

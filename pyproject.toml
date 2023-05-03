@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "dbt-challenge"
+version = "0.1.0"
+description = ""
+authors = ["MokkeMeguru <meguru.mokke@gmail.com>"]
+readme = "README.md"
+packages = [{include = "dbt_challenge"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+dbt-core = "=1.4.6"
+dbt-bigquery = "=1.4.3"
+
+
+[tool.poetry.group.dev.dependencies]
+sqlfluff = "^2.0.7"
+sqlfluff-templater-dbt = "^2.0.7"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

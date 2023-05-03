@@ -1,0 +1,17 @@
+[sqlfluff]
+dialect = bigquery
+templater = dbt
+
+[sqlfluff:templater:jinja]
+apply_dbt_builtins = True
+
+[sqlfluff:templater:dbt]
+project_dir = ./
+profiles_dir = ./
+profile = dbt_thelookec
+target = dev
+
+[sqlfluff:indentation]
+# See https://docs.sqlfluff.com/en/stable/layout.html#configuring-indent-locations
+indent_unit = space
+tab_space_size = 2

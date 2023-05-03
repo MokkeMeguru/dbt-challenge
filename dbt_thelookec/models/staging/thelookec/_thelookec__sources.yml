@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: thelookec
+    database: bigquery-public-data
+    schema: thelook_ecommerce
+    description: >-
+      Fictitious E-Commerce Dataset
+      by look team
+    tables:
+      - name: users
+        description: ユーザ情報
+      - name: products
+        description: 商品情報
+      - name: order_items
+        description: 注文商品情報
