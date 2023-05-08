@@ -8,7 +8,7 @@ user as (
 
 select
   id,
-  first_name,
+  firstName,
   last_name,
   age
 from

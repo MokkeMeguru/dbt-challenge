@@ -28,3 +28,6 @@ docs-serve: docs-gen
 
 format:
 	poetry run sqlfluff fix
+
+lint:
+	poetry run sqlfluff lint
